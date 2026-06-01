@@ -1,0 +1,134 @@
+/* ============================================
+   RESPONSIVE — AcadFlow
+   ============================================ */
+
+/* ── Tablet (≤1024px) ── */
+@media (max-width:1024px) {
+  .grid-2       { grid-template-columns: 1fr !important; }
+  .grid-3       { grid-template-columns: 1fr 1fr !important; }
+  .grid-sidebar { grid-template-columns: 1fr !important; }
+  .grid-profile { grid-template-columns: 1fr !important; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr; }
+  .stats-grid   { grid-template-columns: repeat(2, 1fr); }
+
+  /* Inline grids definidos nas páginas */
+  [style*="grid-template-columns:1fr 1fr"]   { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:2fr 1fr"]   { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:280px 1fr"] { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:1fr 1fr 1fr"]{ grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ── Mobile (≤768px) ── */
+@media (max-width:768px) {
+  /* Sidebar — overlay deslizante */
+  .sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-width) !important;
+    box-shadow: var(--shadow-xl);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .main-wrapper { margin-left: 0 !important; }
+  .navbar-hamburger { display: flex !important; }
+  .navbar-breadcrumb { display: none; }
+
+  /* Conteúdo */
+  .page-content { padding: var(--space-4); }
+  .navbar { padding: 0 var(--space-4); }
+
+  /* Auth */
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-left { display: none; }
+  .auth-right { padding: var(--space-5); }
+  .auth-form-wrap { max-width: 100%; }
+
+  /* Grids */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3, .grid-sidebar, .grid-profile { grid-template-columns: 1fr !important; }
+  .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+
+  /* [FIX] Grids inline das páginas */
+  [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+
+  /* Tabelas */
+  .table-toolbar { flex-direction: column; align-items: stretch; }
+  .table-search  { min-width: unset; }
+  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table    { font-size: var(--text-xs); min-width: 560px; }
+  .data-table th,
+  .data-table td { padding: var(--space-2) var(--space-3); }
+
+  /* Modais */
+  .modal, .modal.modal-lg, .modal.modal-sm {
+    width: calc(100vw - 1rem);
+    max-height: 92vh;
+  }
+  .modal-body { padding: var(--space-4); }
+
+  /* Toasts */
+  .toast-container { bottom: var(--space-4); right: var(--space-4); left: var(--space-4); }
+  .toast { min-width: unset; max-width: unset; width: 100%; }
+
+  /* Page header */
+  .page-header h1 { font-size: var(--text-xl); }
+  .page-header-actions { flex-wrap: wrap; gap: var(--space-2); }
+  .page-header-actions .btn { flex: 1; min-width: 120px; justify-content: center; }
+
+  /* Cards dashboard hero */
+  .card-body [style*="display:flex"][style*="align-items:center"][style*="gap"] {
+    flex-wrap: wrap;
+  }
+
+  /* Stat cards */
+  .stat-card { padding: var(--space-3) var(--space-4); }
+
+  /* Formulário de submissão */
+  .submeter-grid { grid-template-columns: 1fr !important; }
+  #form-fields > .form-row.cols-2 { grid-template-columns: 1fr; }
+
+  /* Botões navbar direita */
+  .navbar-user-btn .nav-user-role { display: none; }
+  .navbar-user-btn .nav-user-name { max-width: 80px; }
+  .aluno-course-switcher { max-width: 140px; }
+  .aluno-course-switcher select { max-width: 100px; }
+
+  /* PWA banner */
+  .pwa-install-banner { bottom: var(--space-3); }
+
+  /* Submissão — painel lateral some em mobile */
+  .submeter-info-panel { display: none; }
+}
+
+/* ── Mobile pequeno (≤480px) ── */
+@media (max-width:480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card  { flex-direction: column; align-items: flex-start; }
+
+  .modal-footer { flex-direction: column; }
+  .modal-footer .btn { width: 100%; }
+
+  .page-content { padding: var(--space-3); }
+
+  /* Navbar mínima */
+  .theme-toggle  { display: none; }
+  .navbar-divider{ display: none; }
+
+  /* Auth */
+  .auth-form-wrap { padding: var(--space-2); }
+  .auth-demo-users { margin-top: var(--space-4); }
+
+  /* Formulário de submissão step badges */
+  .step-badge { display: none; }
+}
+
+/* ── Large (≥1400px) ── */
+@media (min-width:1400px) {
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── Print ── */
+@media print {
+  .sidebar, .navbar, .toast-container,
+  .modal-overlay, .pwa-install-banner { display: none !important; }
+  .main-wrapper { margin-left: 0 !important; }
+  .page-content { padding: 0; max-width: 100%; }
+}

@@ -1,0 +1,23 @@
+/* ── Reset & Base ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{
+  font-family:var(--font-sans);font-size:var(--text-base);
+  font-weight:var(--fw-regular);
+  color:var(--text-primary);
+  background:var(--surface-bg);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;
+  transition:background var(--transition-normal), color var(--transition-normal);
+}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+input,textarea,select{font-family:inherit;font-size:inherit;color:var(--text-primary);}
+ul,ol{list-style:none;}
+img,svg{display:block;max-width:100%;}
+table{border-collapse:collapse;width:100%;}
+h1,h2,h3,h4,h5,h6{line-height:1.3;font-weight:var(--fw-semibold);color:var(--text-primary);}
+.hidden{display:none!important;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0;}
