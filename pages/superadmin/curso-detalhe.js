@@ -2,25 +2,12 @@
  * pages/superadmin/curso-detalhe.js — AcadFlow
  *
  * CORREÇÕES APLICADAS:
- *
- * [FIX-1] Desvincular coordenador:
- *   Agora usa UserService.desvincularCoordCurso(coordId, cursoId) com
- *   a ordem correta dos parâmetros.
- *
- * [FIX-COORD-TROCA] Trocar coordenador:
- *   Implementado fluxo completo: desvincula o atual → vincula o novo.
- *   Usa o mesmo endpoint POST /coordenadores/{coordId}/cursos/{cursoId}.
- *
- * [FIX-ALUNO-VINCULAR] Vincular aluno existente ao curso:
- *   Novo botão "Matricular aluno existente" abre modal com select de alunos
- *   não matriculados e chama POST /alunos/{alunoId}/cursos/{cursoId}.
- *
- * [FIX-ALUNO-DESVINCULAR] Desvincular aluno do curso:
- *   Chama DELETE /alunos/{alunoId}/cursos/{cursoId}.
- *
- * [FIX-SAVE-CURSO] Vincular coordenador ao criar/editar curso:
- *   O retorno de saveCurso() agora é capturado corretamente.
- *   A ordem de operações garante que o ID do curso existe antes de vincular.
+ * [FIX-1] Desvincular coordenador.
+ * [FIX-COORD-TROCA] Trocar coordenador.
+ * [FIX-ALUNO-VINCULAR] Vincular aluno existente ao curso.
+ * [FIX-ALUNO-DESVINCULAR] Desvincular aluno do curso.
+ * [FIX-IMPORT-CSV] Importação em massa de alunos via arquivo CSV vinculando ao curso atual.
+ * [FIX-API-TOKEN] Correção do erro 'Storage.getToken is not a function' usando API.postMultipart.
  */
 const CursoDetalhePage = {
 
@@ -56,11 +43,8 @@ const CursoDetalhePage = {
       const subsDoCurso     = allSubs.filter(s => nomesAlunos.has(s.nomeAluno));
       const cats            = todasCats.filter(c => c.cursoId === cursoId);
 
-      // Coordenador vinculado (o DTO retorna apenas 1, o primeiro do Set)
       const coordAtual      = curso.coordenador || null;
-      // Coordenadores disponíveis para vincular (exceto o atual)
       const coordsDisponiveis = todosCoords.filter(c => c.id !== coordAtual?.id);
-      // Alunos não matriculados neste curso (para matricular existente)
       const alunosNaoMatriculados = todosAlunos.filter(a => !alunoIdsDoCurso.has(a.id));
 
       const horasTotais = alunosDoCurso.reduce((a, al) => a + (al.horasAcumuladas || 0), 0);
@@ -74,7 +58,6 @@ const CursoDetalhePage = {
             </button>
           </div>
 
-          <!-- Banner do curso -->
           <div class="card" style="margin-bottom:var(--space-6);background:linear-gradient(135deg,var(--blue-900),var(--blue-700));color:white;border:none">
             <div class="card-body" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-4)">
               <div style="flex:1">
@@ -99,13 +82,11 @@ const CursoDetalhePage = {
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);margin-bottom:var(--space-6)">
 
-            <!-- Coordenador vinculado -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
                   <i class="fas fa-chalkboard-user" style="color:var(--accent);margin-right:var(--space-2)"></i>Coordenador
                 </span>
-                <!-- [FIX-COORD-TROCA] Botão para vincular/trocar coordenador -->
                 <button class="btn btn-outline btn-sm" id="btn-vincular-coord">
                   <i class="fas fa-${coordAtual ? 'rotate' : 'link'}"></i>
                   ${coordAtual ? 'Trocar' : 'Vincular'}
@@ -119,7 +100,6 @@ const CursoDetalhePage = {
                     <p style="font-weight:var(--fw-semibold)">${Helpers.escHtml(coordAtual.name)}</p>
                     <p style="font-size:var(--text-xs);color:var(--gray-400)">${Helpers.escHtml(coordAtual.email)}</p>
                   </div>
-                  <!-- [FIX-1] Botão desvincular passa coordId correto -->
                   <button class="btn btn-ghost btn-sm" id="btn-desvincular-coord"
                     data-coord-id="${coordAtual.id}" data-coord-nome="${Helpers.escHtml(coordAtual.name)}"
                     title="Desvincular este coordenador">
@@ -134,7 +114,6 @@ const CursoDetalhePage = {
               </div>
             </div>
 
-            <!-- Categorias -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
@@ -159,7 +138,6 @@ const CursoDetalhePage = {
             </div>
           </div>
 
-          <!-- Alunos matriculados -->
           <div class="card" style="margin-bottom:var(--space-6)">
             <div class="card-header">
               <span class="card-header-title">
@@ -167,11 +145,13 @@ const CursoDetalhePage = {
                 Alunos matriculados (${alunosDoCurso.length})
               </span>
               <div style="display:flex;gap:var(--space-2)">
-                <!-- [FIX-ALUNO-VINCULAR] Botão matricular aluno existente -->
                 ${alunosNaoMatriculados.length ? `
                 <button class="btn btn-outline btn-sm" id="btn-matricular-existente">
                   <i class="fas fa-user-plus"></i> Matricular existente
                 </button>` : ''}
+                <button class="btn btn-outline btn-sm" id="btn-importar-csv">
+                  <i class="fas fa-file-csv"></i> Importar CSV
+                </button>
                 <button class="btn btn-primary btn-sm" id="btn-novo-aluno-curso">
                   <i class="fas fa-plus"></i> Novo aluno
                 </button>
@@ -208,7 +188,6 @@ const CursoDetalhePage = {
                         </div>
                       </td>
                       <td>
-                        <!-- [FIX-ALUNO-DESVINCULAR] -->
                         <button class="btn btn-ghost btn-sm btn-desmatricular"
                           data-aluno-id="${a.id}"
                           data-aluno-nome="${Helpers.escHtml(a.name)}"
@@ -228,7 +207,6 @@ const CursoDetalhePage = {
             </div>
           </div>
 
-          <!-- Submissões recentes -->
           <div class="card">
             <div class="card-header">
               <span class="card-header-title">
@@ -259,7 +237,6 @@ const CursoDetalhePage = {
           </div>
         </div>`;
 
-      // Bind all event handlers
       this._bindEvents(cursoId, coordAtual, coordsDisponiveis, alunosNaoMatriculados, curso);
 
     } catch (e) {
@@ -272,7 +249,70 @@ const CursoDetalhePage = {
 
   _bindEvents(cursoId, coordAtual, coordsDisponiveis, alunosNaoMatriculados, curso) {
 
-    // ── [FIX-COORD-TROCA] Vincular / Trocar coordenador ──────────────────────
+    // ── Importar CSV (Usando o API.postMultipart nativo) ──────────────
+    document.getElementById('btn-importar-csv')?.addEventListener('click', () => {
+      Modal.form({
+        title: 'Importar Alunos via CSV',
+        size: 'sm',
+        fields: `
+          <div style="margin-bottom:var(--space-4)">
+            <p style="font-size:var(--text-sm);color:var(--text-secondary)">
+              O arquivo <strong>.csv</strong> deve conter o cabeçalho na primeira linha e as colunas na seguinte ordem:
+            </p>
+            <ul style="font-size:var(--text-xs);color:var(--gray-500);margin-top:8px;padding-left:20px">
+              <li>Coluna 1: <strong>Nome Completo</strong></li>
+              <li>Coluna 2: <strong>E-mail</strong></li>
+              <li>Coluna 3: <strong>Matrícula</strong></li>
+              <li>Coluna 4: <strong>Turma</strong></li>
+            </ul>
+            <p style="font-size:var(--text-xs);color:var(--warning);margin-top:8px;font-weight:600">
+              <i class="fas fa-info-circle"></i> A senha inicial será gerada automaticamente como "123456" para todos.
+            </p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selecione o arquivo CSV <span class="required">*</span></label>
+            <input type="file" id="f-csv" accept=".csv" class="form-control" />
+          </div>`,
+        onSubmit: async (form, close) => {
+          const fileInput = document.getElementById('f-csv');
+          const file = fileInput.files[0];
+          
+          if (!file) throw new Error('Selecione um arquivo CSV primeiro.');
+          if (!file.name.toLowerCase().endsWith('.csv')) throw new Error('Formato inválido. Envie apenas arquivos .csv');
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('cursoId', cursoId);
+
+          const btn = document.querySelector('.btn-modal-submit');
+          let textoOriginal = 'Importar';
+
+          if (btn) {
+            textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            btn.disabled = true;
+          }
+
+          try {
+            // Usa a função nativa do seu sistema que injeta o token automaticamente
+            const alunosCadastrados = await API.postMultipart('/alunos/upload-csv', formData);
+
+            Toast.success('Importação concluída!', `${alunosCadastrados.length} alunos foram matriculados neste curso.`);
+            close();
+            CursoDetalhePage.render(cursoId);
+
+          } catch (error) {
+            if (btn) {
+              btn.innerHTML = textoOriginal;
+              btn.disabled = false;
+            }
+            throw error;
+          }
+        },
+      });
+    });
+
+    // ── Trocar coordenador ──────────────────────
     document.getElementById('btn-vincular-coord')?.addEventListener('click', () => {
       if (!coordsDisponiveis.length) {
         Toast.info('Sem coordenadores', 'Todos os coordenadores já estão vinculados a este curso.');
@@ -302,7 +342,6 @@ const CursoDetalhePage = {
           const novoCoordId = Number(document.getElementById('f-coord-novo').value);
           if (!novoCoordId) throw new Error('Selecione um coordenador.');
 
-          // [FIX-1] Desvincula o atual antes de vincular o novo
           if (coordAtual) {
             await UserService.desvincularCoordCurso(coordAtual.id, cursoId);
           }
@@ -314,7 +353,7 @@ const CursoDetalhePage = {
       });
     });
 
-    // ── [FIX-1] Desvincular coordenador atual ────────────────────────────────
+    // ── Desvincular coordenador atual ────────────────────────────────
     document.getElementById('btn-desvincular-coord')?.addEventListener('click', (e) => {
       const btn      = e.currentTarget;
       const coordId  = Number(btn.dataset.coordId);
@@ -326,7 +365,6 @@ const CursoDetalhePage = {
         confirmText: 'Desvincular',
         type: 'danger',
         onConfirm: async () => {
-          // [FIX-1] Ordem correta: coordId primeiro, cursoId segundo
           await UserService.desvincularCoordCurso(coordId, cursoId);
           Toast.success('Coordenador desvinculado.');
           CursoDetalhePage.render(cursoId);
@@ -334,7 +372,7 @@ const CursoDetalhePage = {
       });
     });
 
-    // ── [FIX-ALUNO-VINCULAR] Matricular aluno existente ──────────────────────
+    // ── Matricular aluno existente ──────────────────────
     document.getElementById('btn-matricular-existente')?.addEventListener('click', () => {
       const opts = alunosNaoMatriculados.map(a =>
         `<option value="${a.id}">${Helpers.escHtml(a.name)} — Mat: ${Helpers.escHtml(a.matricula || '—')}</option>`
@@ -358,7 +396,6 @@ const CursoDetalhePage = {
         onSubmit: async (form, close) => {
           const alunoId = Number(document.getElementById('f-aluno-existente').value);
           if (!alunoId) throw new Error('Selecione um aluno.');
-          // POST /alunos/{alunoId}/cursos/{cursoId}
           await UserService.matricularEmCurso(alunoId, cursoId);
           Toast.success('Aluno matriculado com sucesso!');
           close();
@@ -405,7 +442,7 @@ const CursoDetalhePage = {
           const senha = document.getElementById('f-senha').value;
           if (!name || !email || !mat || !turma) throw new Error('Preencha todos os campos obrigatórios.');
           if (!senha || senha.length < 6) throw new Error('Senha deve ter no mínimo 6 caracteres.');
-          // POST /alunos/curso/{cursoId} — cria + vincula
+          
           await UserService.saveAluno({ name, email, matricula: mat, turma, senha }, null, cursoId);
           Toast.success('Aluno cadastrado e matriculado!', name);
           close();
@@ -414,7 +451,7 @@ const CursoDetalhePage = {
       });
     });
 
-    // ── [FIX-ALUNO-DESVINCULAR] Desmatricular aluno ──────────────────────────
+    // ── Desmatricular aluno ──────────────────────────
     document.querySelectorAll('.btn-desmatricular').forEach(btn => {
       btn.addEventListener('click', () => {
         const alunoId   = Number(btn.dataset.alunoId);
@@ -425,7 +462,6 @@ const CursoDetalhePage = {
           confirmText: 'Desmatricular',
           type: 'danger',
           onConfirm: async () => {
-            // DELETE /alunos/{alunoId}/cursos/{cursoId}
             await UserService.desvincularAlunoCurso(alunoId, cursoId);
             Toast.success('Aluno desmatriculado.', alunoNome);
             CursoDetalhePage.render(cursoId);

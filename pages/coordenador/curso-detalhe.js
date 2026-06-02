@@ -4,6 +4,9 @@
  * [FIX-COORD-VER-CURSO] Página de detalhes do curso para o coordenador.
  * Exibe informações gerais, categorias, alunos e submissões.
  * O coordenador visualiza apenas o curso ativo (sem editar vínculos).
+ * * [FIX-ISOLAMENTO-CURSO] Submissões agora são buscadas diretamente 
+ * na API pelo cursoId, garantindo que o coordenador não veja 
+ * atividades de outros cursos.
  */
 const CoordenadorCursoDetalhe = {
   async render() {
@@ -53,14 +56,13 @@ const CoordenadorCursoDetalhe = {
     const cursoId = cursoObj.id;
 
     try {
-      const [alunosDoCurso, allSubs, todasCats] = await Promise.all([
+      // [CORREÇÃO] Busca apenas os alunos, submissões do curso específico e todas as categorias
+      const [alunosDoCurso, subsDoCurso, todasCats] = await Promise.all([
         UserService.getAlunosByCurso(cursoId).catch(() => []),
-        ActivityService.getSubmissoes().catch(() => []),
+        ActivityService.getSubmissoesPorCurso(cursoId).catch(() => []), // Traz apenas as deste curso diretamente da API
         ActivityService.getCategorias().catch(() => []),
       ]);
 
-      const nomesAlunos = new Set(alunosDoCurso.map(a => a.name));
-      const subsDoCurso = allSubs.filter(s => nomesAlunos.has(s.nomeAluno));
       const cats        = todasCats.filter(c => c.cursoId === cursoId);
 
       const horasTotais = alunosDoCurso.reduce((a, al) => a + (al.horasAcumuladas || 0), 0);
@@ -79,7 +81,6 @@ const CoordenadorCursoDetalhe = {
             </button>
           </div>
 
-          <!-- Banner do curso -->
           <div class="card" style="margin-bottom:var(--space-6);background:linear-gradient(135deg,var(--blue-900),var(--blue-700));color:white;border:none">
             <div class="card-body" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-4)">
               <div style="flex:1">
@@ -109,17 +110,15 @@ const CoordenadorCursoDetalhe = {
             </div>
           </div>
 
-          <!-- Stats de submissões -->
           <div class="stats-grid stagger" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:var(--space-6)">
             ${Card.stat({ icon:'fas fa-file-arrow-up',  label:'Total Submissões', value: subsDoCurso.length, color:'blue'   })}
-            ${Card.stat({ icon:'fas fa-clock',           label:'Pendentes',        value: pendentes,          color:'orange' })}
+            ${Card.stat({ icon:'fas fa-clock',          label:'Pendentes',        value: pendentes,          color:'orange' })}
             ${Card.stat({ icon:'fas fa-circle-check',    label:'Aprovadas',        value: aprovadas,          color:'green'  })}
             ${Card.stat({ icon:'fas fa-circle-xmark',    label:'Rejeitadas',       value: rejeitadas,         color:'red'    })}
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);margin-bottom:var(--space-6)">
 
-            <!-- Categorias -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
@@ -150,7 +149,6 @@ const CoordenadorCursoDetalhe = {
               </div>
             </div>
 
-            <!-- Progresso dos alunos -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
@@ -185,7 +183,6 @@ const CoordenadorCursoDetalhe = {
             </div>
           </div>
 
-          <!-- Submissões recentes -->
           <div class="card">
             <div class="card-header">
               <span class="card-header-title">

@@ -8,8 +8,8 @@
  * {
  * aluno:     { id: number },
  * categoria: { id: number },
- * curso:     { id: number },          ← obrigatório
- * certificado: {                      ← opcional (dados de Autenticação/OCR)
+ * curso:     { id: number },         ← obrigatório
+ * certificado: {                     ← opcional (dados de Autenticação/OCR)
  * nomeAlunoOcr:    string | null,
  * nomeCursoOcr:    string | null,
  * cargaHorariaOcr: number | null,
@@ -62,12 +62,19 @@ const ActivityService = {
   
   getSubmissao(id) { return API.get(`/submissoes/${id}`); },
 
-  // [NOVO] Rota segura: Busca apenas as submissões de um curso específico
+  // Rota segura: Busca apenas as submissões de um curso específico
   getSubmissoesPorCurso(cursoId) {
     if (!cursoId) return Promise.resolve([]);
     return API.get(`/submissoes?cursoId=${cursoId}`);
   },
 
+  // [NOVO] Rota segura: Busca o histórico apenas do aluno logado
+  getSubmissoesPorAluno(alunoId) {
+    if (!alunoId) return Promise.resolve([]);
+    return API.get(`/submissoes/aluno/${alunoId}`);
+  },
+
+  // Mantido para retrocompatibilidade
   async getSubmissoesByAluno(nomeAluno) {
     const all = await this.getSubmissoes();
     return all.filter(s => s.nomeAluno === nomeAluno);

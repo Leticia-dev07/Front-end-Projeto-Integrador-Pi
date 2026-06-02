@@ -4,15 +4,18 @@
  * CORREÇÕES APLICADAS:
  *
  * [FIX-COORD-VINCULAR-ALUNO] Coordenador agora pode:
- *   1. Cadastrar novo aluno via POST /alunos/curso/{cursoId}
- *   2. Matricular aluno existente via POST /alunos/{alunoId}/cursos/{cursoId}
+ * 1. Cadastrar novo aluno via POST /alunos/curso/{cursoId}
+ * 2. Matricular aluno existente via POST /alunos/{alunoId}/cursos/{cursoId}
  *
  * [FIX-COORD-DESVINCULAR-ALUNO] Coordenador pode desmatricular aluno
- *   via DELETE /alunos/{alunoId}/cursos/{cursoId}
- *   (SecurityConfig permite: hasAnyRole("ADMIN","COORDENADOR"))
+ * via DELETE /alunos/{alunoId}/cursos/{cursoId}
+ * (SecurityConfig permite: hasAnyRole("ADMIN","COORDENADOR"))
  *
  * [FIX-COORD-VER-CURSO] Botão "Ver detalhes do curso" redireciona para
- *   a página de detalhes do curso com informações completas.
+ * a página de detalhes do curso com informações completas.
+ *
+ * [FIX-IMPORT-CSV] Adicionada função para Importar alunos via CSV diretamente 
+ * para o curso ativo do coordenador.
  */
 const CoordenadorAlunos = {
   _cursoId:   null,
@@ -53,7 +56,7 @@ const CoordenadorAlunos = {
       UserService.getAlunos().catch(() => []),
     ]);
 
-    this._alunosDoCurso      = alunosDoCurso;
+    this._alunosDoCurso         = alunosDoCurso;
     this._alunosNaoMatriculados = todosAlunos.filter(a =>
       !alunosDoCurso.some(ad => ad.id === a.id)
     );
@@ -101,6 +104,9 @@ const CoordenadorAlunos = {
           <button class="btn btn-outline btn-sm" id="btn-matricular-existente">
             <i class="fas fa-user-plus"></i> Matricular existente
           </button>` : ''}
+          <button class="btn btn-outline btn-sm" id="btn-importar-csv-c">
+            <i class="fas fa-file-csv"></i> Importar CSV
+          </button>
           <button class="btn btn-primary" id="btn-novo-aluno-c">
             <i class="fas fa-plus"></i> Novo aluno
           </button>
@@ -149,6 +155,73 @@ const CoordenadorAlunos = {
           }),
         },
       ],
+    });
+
+    // ── [NOVO] Importar CSV ──────────────────────────────────────────────────
+    document.getElementById('btn-importar-csv-c')?.addEventListener('click', () => {
+      Modal.form({
+        title: 'Importar Alunos via CSV',
+        size: 'sm',
+        fields: `
+          <div style="margin-bottom:var(--space-4)">
+            <p style="font-size:var(--text-sm);color:var(--text-secondary)">
+              O arquivo <strong>.csv</strong> deve conter o cabeçalho na primeira linha e as colunas na seguinte ordem:
+            </p>
+            <ul style="font-size:var(--text-xs);color:var(--gray-500);margin-top:8px;padding-left:20px">
+              <li>Coluna 1: <strong>Nome Completo</strong></li>
+              <li>Coluna 2: <strong>E-mail</strong></li>
+              <li>Coluna 3: <strong>Matrícula</strong></li>
+              <li>Coluna 4: <strong>Turma</strong></li>
+            </ul>
+            <p style="font-size:var(--text-xs);color:var(--warning);margin-top:8px;font-weight:600">
+              <i class="fas fa-info-circle"></i> A senha inicial será gerada automaticamente como "123456" para todos.
+            </p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selecione o arquivo CSV <span class="required">*</span></label>
+            <input type="file" id="f-csv" accept=".csv" class="form-control" />
+          </div>`,
+        onSubmit: async (form, close) => {
+          const fileInput = document.getElementById('f-csv');
+          const file = fileInput.files[0];
+          
+          if (!file) throw new Error('Selecione um arquivo CSV primeiro.');
+          if (!file.name.toLowerCase().endsWith('.csv')) throw new Error('Formato inválido. Envie apenas arquivos .csv');
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('cursoId', cursoId);
+
+          const btn = document.querySelector('.btn-modal-submit');
+          let textoOriginal = 'Importar';
+
+          if (btn) {
+            textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            btn.disabled = true;
+          }
+
+          try {
+            // Usa a função nativa do projeto para embutir URL Base e Token
+            const alunosCadastrados = await API.postMultipart('/alunos/upload-csv', formData);
+
+            Toast.success('Importação concluída!', `${alunosCadastrados.length} alunos foram matriculados neste curso.`);
+            close();
+            
+            // Recarrega a tabela com os novos alunos cadastrados
+            const updated = await UserService.getAlunosByCurso(cursoId);
+            this._alunosDoCurso = updated;
+            this._draw(updated);
+
+          } catch (error) {
+            if (btn) {
+              btn.innerHTML = textoOriginal;
+              btn.disabled = false;
+            }
+            throw error; // Repassa o erro para o Modal exibir
+          }
+        },
+      });
     });
 
     // [FIX-COORD-VINCULAR-ALUNO] Matricular aluno existente

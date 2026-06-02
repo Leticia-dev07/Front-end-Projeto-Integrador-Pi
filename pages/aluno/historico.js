@@ -1,6 +1,9 @@
 /**
  * pages/aluno/historico.js — AcadFlow
  * [FIX] Exibe nomeCurso e dadosOcr no modal de detalhes.
+ * [FIX-SEGURANCA] Busca as submissões diretamente pelo ID do aluno na API, 
+ * evitando baixar dados da faculdade inteira para filtrar no frontend.
+ * [FIX-URL-ARQUIVO] Aceita urlArquivo ou urlCertificado para não quebrar o PDF.
  */
 const AlunoHistorico = {
   _filter:  'all',
@@ -36,8 +39,14 @@ const AlunoHistorico = {
       });
     });
 
-    const all = await ActivityService.getSubmissoes().catch(e => { Toast.error('Erro', e.message); return []; });
-    this._allSubs = all.filter(s => s.nomeAluno === session.name);
+    // [CORREÇÃO] Busca EXCLUSIVAMENTE as submissões deste aluno pelo ID dele
+    try {
+      this._allSubs = await ActivityService.getSubmissoesPorAluno(session.profileId);
+    } catch (e) {
+      Toast.error('Erro ao buscar histórico', e.message);
+      this._allSubs = [];
+    }
+    
     this._drawTable();
   },
 
@@ -79,6 +88,9 @@ const AlunoHistorico = {
 
   _openDetail(sub) {
     const isRej = sub.status === 'REJEITADO';
+
+    // [CORREÇÃO] Pega a URL de forma segura com fallback
+    const linkArquivo = sub.urlArquivo || sub.urlCertificado;
 
     // Seção de dados OCR
     const ocrSection = sub.dadosOcr ? `
@@ -143,11 +155,11 @@ const AlunoHistorico = {
           <div style="flex:1">
             <p style="font-weight:600;font-size:var(--text-sm);color:var(--text-primary)">Certificado enviado</p>
             <p style="font-size:var(--text-xs);color:var(--text-muted)">
-              ${sub.urlCertificado ? 'Disponível' : 'URL não disponível'}
+              ${linkArquivo ? 'Disponível' : 'URL não disponível'}
             </p>
           </div>
-          ${sub.urlCertificado
-            ? `<a href="${Helpers.escHtml(sub.urlCertificado)}" target="_blank" rel="noopener"
+          ${linkArquivo
+            ? `<a href="${Helpers.escHtml(linkArquivo)}" target="_blank" rel="noopener"
                 class="btn btn-outline btn-sm">
                 <i class="fas fa-external-link-alt"></i> Abrir
                </a>`
