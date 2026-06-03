@@ -4,9 +4,9 @@
  * [FIX-COORD-VER-CURSO] Página de detalhes do curso para o coordenador.
  * Exibe informações gerais, categorias, alunos e submissões.
  * O coordenador visualiza apenas o curso ativo (sem editar vínculos).
- * * [FIX-ISOLAMENTO-CURSO] Submissões agora são buscadas diretamente 
- * na API pelo cursoId, garantindo que o coordenador não veja 
- * atividades de outros cursos.
+ * [FIX-ISOLAMENTO-CURSO] Submissões buscadas diretamente na API pelo cursoId.
+ * [FIX-COR-NOME-CURSO] Forçado color:#ffffff !important apenas no Nome do Curso 
+ * (e sua descrição) dentro do banner para ignorar as regras do tema claro.
  */
 const CoordenadorCursoDetalhe = {
   async render() {
@@ -56,10 +56,9 @@ const CoordenadorCursoDetalhe = {
     const cursoId = cursoObj.id;
 
     try {
-      // [CORREÇÃO] Busca apenas os alunos, submissões do curso específico e todas as categorias
       const [alunosDoCurso, subsDoCurso, todasCats] = await Promise.all([
         UserService.getAlunosByCurso(cursoId).catch(() => []),
-        ActivityService.getSubmissoesPorCurso(cursoId).catch(() => []), // Traz apenas as deste curso diretamente da API
+        ActivityService.getSubmissoesPorCurso(cursoId).catch(() => []),
         ActivityService.getCategorias().catch(() => []),
       ]);
 
@@ -81,19 +80,25 @@ const CoordenadorCursoDetalhe = {
             </button>
           </div>
 
+          <!-- Banner do curso (A cor branca forçada no Nome do Curso com !important) -->
           <div class="card" style="margin-bottom:var(--space-6);background:linear-gradient(135deg,var(--blue-900),var(--blue-700));color:white;border:none">
             <div class="card-body" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-4)">
               <div style="flex:1">
                 <span class="badge" style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);margin-bottom:var(--space-3)">
                   <i class="fas fa-graduation-cap"></i> Curso
                 </span>
-                <h2 style="font-size:var(--text-2xl);font-weight:var(--fw-black);letter-spacing:-.04em;margin-top:4px">
+                
+                <!-- NOME DO CURSO -->
+                <h2 style="font-size:var(--text-2xl);font-weight:var(--fw-black);letter-spacing:-.04em;margin-top:4px;color:#ffffff !important;">
                   ${Helpers.escHtml(cursoObj.nome)}
                 </h2>
-                <p style="opacity:.7;margin-top:var(--space-2);max-width:600px;line-height:1.6">
+                
+                <p style="opacity:.8;margin-top:var(--space-2);max-width:600px;line-height:1.6;color:#ffffff !important;">
                   ${Helpers.escHtml(cursoObj.descricao || 'Sem descrição cadastrada.')}
                 </p>
               </div>
+              
+              <!-- NÚMEROS E ESTATÍSTICAS DO BANNER -->
               <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;text-align:center">
                 ${[
                   ['fas fa-hourglass-half', 'Carga Máxima', `${cursoObj.cargaHorariaMax}h`],
@@ -102,14 +107,15 @@ const CoordenadorCursoDetalhe = {
                   ['fas fa-chart-line',      'Média Horas',  `${mediaHoras}h`],
                 ].map(([ic, lb, vl]) => `
                   <div>
-                    <i class="${ic}" style="font-size:1rem;opacity:.6;margin-bottom:4px;display:block"></i>
-                    <p style="font-size:var(--text-2xl);font-weight:var(--fw-black);line-height:1">${vl}</p>
-                    <p style="font-size:.65rem;opacity:.55;margin-top:2px">${lb}</p>
+                    <i class="${ic}" style="font-size:1rem;opacity:.6;margin-bottom:4px;display:block;color:#ffffff !important;"></i>
+                    <p style="font-size:var(--text-2xl);font-weight:var(--fw-black);line-height:1;color:#ffffff !important;">${vl}</p>
+                    <p style="font-size:.65rem;opacity:.6;margin-top:2px;color:#ffffff !important;">${lb}</p>
                   </div>`).join('')}
               </div>
             </div>
           </div>
 
+          <!-- Stats de submissões -->
           <div class="stats-grid stagger" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:var(--space-6)">
             ${Card.stat({ icon:'fas fa-file-arrow-up',  label:'Total Submissões', value: subsDoCurso.length, color:'blue'   })}
             ${Card.stat({ icon:'fas fa-clock',          label:'Pendentes',        value: pendentes,          color:'orange' })}
@@ -119,6 +125,7 @@ const CoordenadorCursoDetalhe = {
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);margin-bottom:var(--space-6)">
 
+            <!-- Categorias -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
@@ -149,6 +156,7 @@ const CoordenadorCursoDetalhe = {
               </div>
             </div>
 
+            <!-- Progresso dos alunos -->
             <div class="card">
               <div class="card-header">
                 <span class="card-header-title">
@@ -183,6 +191,7 @@ const CoordenadorCursoDetalhe = {
             </div>
           </div>
 
+          <!-- Submissões recentes -->
           <div class="card">
             <div class="card-header">
               <span class="card-header-title">
