@@ -3,9 +3,10 @@
  *
  * FLUXO ATUALIZADO E DEFINITIVO:
  * 1. Todos os campos são sempre visíveis e desbloqueados.
- * 2. Bloqueio ABSOLUTO de duplicidade de cursos via normalize('NFD') na renderização.
- * 3. Seção do Certificado fixa, nativa e obrigatória (independente de OCR).
- * 4. Botão sempre clicável (validação via Toast para melhor UX).
+ * 2. Busca otimizada de cursos diretamente no backend.
+ * 3. Bloqueio ABSOLUTO de duplicidade de cursos via normalize('NFD') na renderização.
+ * 4. Seção do Certificado fixa, nativa e obrigatória (independente de OCR).
+ * 5. Botão sempre clicável (validação via Toast para melhor UX).
  */
 const AlunoSubmeter = {
   _file:       null,
@@ -40,33 +41,21 @@ const AlunoSubmeter = {
     this._renderForm();
   },
 
+  // ── BUSCA DE CURSOS OTIMIZADA ──
   async _loadCursos(session) {
     try {
-      const cursos = await UserService.getCursos();
-      this._meusCursos = [];
-      
-      const seenNames = new Set(); 
-
-      for (const c of cursos) {
-        if (!c || !c.nome) continue;
-        
-        const nomeNormalizado = c.nome.trim().toLowerCase();
-        if (seenNames.has(nomeNormalizado)) continue; 
-        
-        try {
-          const alunos = await UserService.getAlunosByCurso(c.id);
-          if (alunos.some(a => Number(a.id) === Number(session.profileId))) {
-            this._meusCursos.push(c);
-            seenNames.add(nomeNormalizado);
-          }
-        } catch { /* ignora */ }
-      }
+      // Faz uma única requisição ao backend
+      const cursos = await ActivityService.getCursosByAluno(session.profileId);
+      this._meusCursos = cursos || [];
       
       const salvo  = Storage.getAlunoCursoAtivo();
       const valido = this._meusCursos.find(c => Number(c.id) === Number(salvo));
       this._cursoId = valido ? valido.id : (this._meusCursos[0]?.id || null);
       if (this._cursoId) Storage.setAlunoCursoAtivo(this._cursoId);
-    } catch { this._cursoId = null; }
+    } catch { 
+      this._meusCursos = [];
+      this._cursoId = null; 
+    }
   },
 
   _renderForm() {

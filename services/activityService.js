@@ -17,18 +17,6 @@
  * } | null
  * }
  * part "file": arquivo binário
- *
- * SubmissaoDTO retorna:
- * { id, dataEnvio, status, horasAproveitadas,
- * observacaoCoordenador, nomeAluno, nomeCategoria,
- * urlCertificado, nomeCurso,
- * dadosOcr: { id, nomeAlunoOcr, nomeCursoOcr,
- * cargaHorariaOcr, dataConclusaoOcr } | null }
- *
- * O backend (SubmissaoService.insert) faz:
- * if (entity.getCertificado() != null)
- * entity.getCertificado().setSubmissao(entity)
- * Então o certificado é persistido via CascadeType.ALL automaticamente.
  */
 const ActivityService = {
 
@@ -56,25 +44,30 @@ const ActivityService = {
 
   deleteCategoria(id) { return API.del(`/categorias/${id}`); },
 
+  /* ── CURSOS DO ALUNO ──────────────────────────────────── */
+  /**
+   * [NOVO] Rota otimizada: Busca apenas os cursos vinculados ao aluno.
+   */
+  getCursosByAluno(alunoId) {
+    if (!alunoId) return Promise.resolve([]);
+    return API.get(`/alunos/${alunoId}/cursos`);
+  },
+
   /* ── SUBMISSÕES ───────────────────────────────────────── */
-  // Rota sem filtro (Traz o banco inteiro - Uso administrativo)
   getSubmissoes()  { return API.get('/submissoes'); },
   
   getSubmissao(id) { return API.get(`/submissoes/${id}`); },
 
-  // Rota segura: Busca apenas as submissões de um curso específico
   getSubmissoesPorCurso(cursoId) {
     if (!cursoId) return Promise.resolve([]);
     return API.get(`/submissoes?cursoId=${cursoId}`);
   },
 
-  // [NOVO] Rota segura: Busca o histórico apenas do aluno logado
   getSubmissoesPorAluno(alunoId) {
     if (!alunoId) return Promise.resolve([]);
     return API.get(`/submissoes/aluno/${alunoId}`);
   },
 
-  // Mantido para retrocompatibilidade
   async getSubmissoesByAluno(nomeAluno) {
     const all = await this.getSubmissoes();
     return all.filter(s => s.nomeAluno === nomeAluno);
@@ -82,27 +75,16 @@ const ActivityService = {
 
   /**
    * Submete certificado.
-   *
-   * @param {object} params
-   * alunoId      {number}       — obrigatório
-   * categoriaId  {number}       — obrigatório
-   * cursoId      {number}       — obrigatório (validado no backend)
-   * file         {File}         — obrigatório
-   * dadosOcr     {object|null}  — opcional: { nomeAlunoOcr, nomeCursoOcr,
-   * cargaHorariaOcr, dataConclusaoOcr }
    */
   async inserirSubmissao({ alunoId, categoriaId, cursoId, file, dadosOcr = null }) {
     if (!cursoId) throw new Error('Selecione o curso antes de enviar.');
 
-    // Monta o JSON da entidade Submissao conforme o backend espera
     const submissaoObj = {
       aluno:     { id: alunoId     },
       categoria: { id: categoriaId },
       curso:     { id: cursoId     },
     };
 
-    // Inclui dados do certificado apenas se existirem.
-    // A chave "certificado" é obrigatória para o Jackson mapear a entidade Java.
     if (dadosOcr && Object.values(dadosOcr).some(v => v !== null && v !== '')) {
       submissaoObj.certificado = {
         nomeAlunoOcr:     dadosOcr.nomeAlunoOcr     || null,
