@@ -7,6 +7,7 @@
  * 3. Bloqueio ABSOLUTO de duplicidade de cursos via normalize('NFD') na renderização.
  * 4. Seção do Certificado fixa, nativa e obrigatória (independente de OCR).
  * 5. Botão sempre clicável (validação via Toast para melhor UX).
+ * 6. Integração OCR Inteligente via Microsserviço Local.
  */
 const AlunoSubmeter = {
   _file:       null,
@@ -44,7 +45,6 @@ const AlunoSubmeter = {
   // ── BUSCA DE CURSOS OTIMIZADA ──
   async _loadCursos(session) {
     try {
-      // Faz uma única requisição ao backend
       const cursos = await ActivityService.getCursosByAluno(session.profileId);
       this._meusCursos = cursos || [];
       
@@ -72,7 +72,6 @@ const AlunoSubmeter = {
 
     for (const c of this._meusCursos) {
       if (!c || !c.nome) continue;
-      // Arranca acentos, caracteres invisíveis e padroniza tudo para garantir que a comparação não falhe
       const nomeBlindado = c.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 
       if (!nomesVistosParaRender.has(nomeBlindado)) {
@@ -377,8 +376,34 @@ const AlunoSubmeter = {
     });
   },
 
+  // ── INTEGRAÇÃO COM A API DE OCR LOCAL ──
   async _processOcrPlaceholder(file) {
-    // Espaço para a futura implementação OCR
+    Toast.info('Analisando documento...', 'A Inteligência Artificial está extraindo os dados.');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Faz a requisição para o microsserviço Python rodando localmente
+      const response = await fetch('http://localhost:8000/ler-certificado', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Falha ao processar o certificado.');
+      }
+
+      const data = await response.json();
+      
+      if (data.sucesso && data.dadosOcr) {
+        this._preencherCamposOcr(data.dadosOcr);
+      }
+    } catch (error) {
+      console.error("Erro no OCR:", error);
+      Toast.error('Erro na Leitura Automática', 'Não foi possível ler o arquivo. Por favor, preencha os dados manualmente.');
+    }
   },
 
   _preencherCamposOcr(dados) {
@@ -393,7 +418,7 @@ const AlunoSubmeter = {
       const cat = document.getElementById('f-cat');
       if (cat) { cat.value = dados.categoriaId; cat.dispatchEvent(new Event('change')); }
     }
-    Toast.info('Dados Lidos', 'Os campos foram preenchidos pelo sistema. Verifique antes de enviar.');
+    Toast.success('Dados Extraídos', 'Campos preenchidos automaticamente. Verifique as informações antes de enviar.');
   },
 };
 window.AlunoSubmeter = AlunoSubmeter;
