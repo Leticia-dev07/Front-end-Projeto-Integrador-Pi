@@ -377,15 +377,17 @@ const AlunoSubmeter = {
   },
 
   // ── INTEGRAÇÃO COM A API DE OCR LOCAL ──
+  // ── INTEGRAÇÃO COM A API DE OCR (PRODUÇÃO) ──
   async _processOcrPlaceholder(file) {
-    Toast.info('Analisando documento...', 'A Inteligência Artificial está extraindo os dados.');
+    // Atualizamos a mensagem para tranquilizar o aluno em caso de Cold Start do Render
+    Toast.info('Analisando documento...', 'A IA está extraindo os dados. Isso pode levar até 1 minuto na primeira leitura.');
     
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      // Faz a requisição para o microsserviço Python rodando localmente
-      const response = await fetch('http://localhost:8000/ler-certificado', {
+      // Apontando para o seu microsserviço no Render
+      const response = await fetch('https://ocr-tesseract-python.onrender.com/ler-certificado', {
         method: 'POST',
         body: formData
       });
