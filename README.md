@@ -2,6 +2,7 @@
 
 Sistema web para gerenciamento de atividades complementares acadêmicas. Permite que alunos submetam certificados, coordenadores avaliem submissões e administradores gerenciem cursos e usuários — tudo em uma SPA progressiva (PWA) sem dependências de framework.
 
+link do front: https://leticia-dev07.github.io/Front-end-Projeto-Integrador-Pi/#
 ---
 
 ## ✨ Funcionalidades
